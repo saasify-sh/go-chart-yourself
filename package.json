@@ -1,0 +1,46 @@
+{
+  "name": "go-chart-yourself",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Puppeteer as a service",
+  "repository": "saasify-sh/go-chart-yourself",
+  "author": "Saasify <dev@saasify.sh>",
+  "license": "MIT",
+  "scripts": {
+    "test": "saasify debug",
+    "deploy": "saasify deploy",
+    "toc": "markdown-toc -i readme.md"
+  },
+  "keywords": [
+    "puppeteer",
+    "chrome",
+    "chromium",
+    "headless",
+    "screenshot",
+    "pdf",
+    "serverless",
+    "saas",
+    "faas",
+    "api",
+    "browserless",
+    "puppet",
+    "open source",
+    "lambda",
+    "capture-website"
+  ],
+  "dependencies": {
+    "chart.js": "^2.9.3",
+    "chartjs-plugin-rough": "^0.2.0",
+    "chrome-aws-lambda": "^2.0.1",
+    "fts-core": "^1.1.0",
+    "puppeteer-core": "^2.0.0",
+    "roughjs": "^3.1.0"
+  },
+  "devDependencies": {
+    "@types/chart.js": "^2.9.5",
+    "@types/node": "^12.6.9",
+    "@types/puppeteer-core": "^2.0.0",
+    "markdown-toc": "^1.2.0",
+    "microbundle": "^0.11.0"
+  }
+}
