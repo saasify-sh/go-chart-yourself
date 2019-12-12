@@ -113,7 +113,7 @@ body {
 
 <body>
 
-<canvas id="main"></canvas>
+<canvas id="main" width="${width}" height="${height}"></canvas>
 
 <script>
   function ready () {
@@ -156,8 +156,8 @@ body {
 
   await page.setViewport({
     deviceScaleFactor,
-    width: width || 640,
-    height: height || 480
+    width,
+    height
   })
   await page.setContent(html)
   await page.waitForSelector('.ready')
