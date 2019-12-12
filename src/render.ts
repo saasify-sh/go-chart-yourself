@@ -1,7 +1,6 @@
-import * as fs from 'fs'
 import { HttpResponse } from 'fts-core'
-
 import { ChartType, ChartData, ChartOptions } from 'chart.js'
+
 import { getPage } from './lib/page'
 import { GoogleFont } from './google-fonts'
 
@@ -16,7 +15,43 @@ type ChartRoughFillStyle =
   | 'dashed'
   | 'zigzag-line'
 
-export default async function render(
+/**
+ * Renders the given chart as a static PNG image using [chart.js](https://www.chartjs.org).
+ *
+ * @param type - Required type of chart to render.
+ * @param data - Required chart data following chart.js.
+ * @param options - Optional chart.js configuration. We don't currently support custom JS functions.
+ * @param width - Optional width of chart in pixels.
+ * @param height - Optional height of chart in pixels.
+ * @param deviceScaleFactor - Multiplication factor for retina displays that will multiply the `width`x`height` by this amount for the size of the output image. Defaults to retina `2`.
+ *
+ * Note that you should use `deviceScaleFactor` instead of the chart.js equivalent [devicePixelRatio](https://www.chartjs.org/docs/latest/general/device-pixel-ratio.html) with both handle similar roles.
+ * @param fontFamily - Font family(s) to use for all chart text. Supports any font from [Google Fonts](https://fonts.google.com). Just use the full font name as you would reference it in CSS like [`Indie Flower`](https://fonts.google.com/specimen/Indie+Flower).
+ * @param fontSize - Default font size (in px) for text. Does not apply to radialLinear scale point labels.
+ * @param fontColor - Default font color for all text.
+ * @param fontStyle - Default font style (`normal`, `italic`, `bold`). Does not apply to tooltip title or footer. Does not apply to chart title.
+ * @param style - What style of chart to render. We currently support `normal` and `rough` styles, where `normal` corresponds to chart.js's default canvas rendering and `rough` uses [roughjs](https://github.com/pshihn/rough/wiki#options) to render more stylized charts.
+ * @param roughness - Numerical value indicating how rough the drawing is. A rectangle with the roughness of 0 would be a perfect rectangle. Default value is 1. There is no upper limit to this value, but a value over 10 is mostly useless. (rough style only)
+ * @param bowing - Numerical value indicating how curvy the lines are when drawing a sketch. A value of 0 will cause straight lines.(rough style only)
+ * @param fillStyle - Fill style for chart shapes. (rough style only)
+ * - `hachure` draws sketchy parallel lines with the same roughness as defined by the roughness and the bowing properties of the shape. It can be further configured using the fillWeight, hachureAngle, and hachureGap properties.
+ * - `solid` is more like a conventional fill.
+ * - `zigzag` draws zig-zag lines filling the shape
+ * - `cross-hatch` Similar to hachure, but draws cross hatch lines (akin to two hachure fills 90 degrees from each other).
+ * - `dots` Fills the shape with sketchy dots.
+ * - `sunburst` Draws lines originating from the center of the shape to the edges in all directions.
+ * - `dashed` Similar to hachure but the individual lines are dashed. Dashes can be configured using the dashOffset and dashGap properties.
+ * - `zigzag-line` Similar to hachure but individual lines are drawn in a zig-zag fashion. The size of the zig-zag can be configured using the zigzagOffset property.
+ * @param fillWeight - Numeric value representing the width of the hachure lines. Default value of the `fillWeight` is set to half the strokeWidth of that shape. (rough style only)
+ * When using `dots` style, this value represents the diameter of the dots.
+ * @param hachureAngle - Numerical value (in degrees) that defines the angle of the hachure lines. Default value is -41 degrees. (rough style only)
+ * @param hachureGap - Numerical value that defines the average gap, in pixels, between two hachure lines. Default value of the hachureGap is set to four times the strokeWidth of that shape. (rough style only)
+ * @param curveStepCount - When drawing ellipses, circles, and arcs, RoughJS approximates curveStepCount number of points to estimate the shape. Default value is 9. (rough style only)
+ * @param simplification - When drawing paths using SVG path instructions, simplification can be set to simplify the shape by the specified factor. The value can be between 0 and 1. (rough style only)
+ *
+ * For example, a path with 100 points and a simplification value of 0.5 will estimate the shape to about 50 points. This will give more complex shapes a sketchy feel. A value of 0 (default) is treated as no simplification.
+ */
+export async function render(
   type: ChartType,
   data: ChartData,
   options?: ChartOptions,
@@ -177,47 +212,3 @@ body {
     body
   }
 }
-
-render(
-  'bar',
-  {
-    labels: ['Red', 'Blue', 'Yellow', 'Green', 'Purple', 'Orange'],
-    datasets: [
-      {
-        label: '# of Votes',
-        data: [12, 19, 3, 5, 2, 3],
-        backgroundColor: [
-          'rgba(255, 99, 132, 0.2)',
-          'rgba(54, 162, 235, 0.2)',
-          'rgba(255, 206, 86, 0.2)',
-          'rgba(75, 192, 192, 0.2)',
-          'rgba(153, 102, 255, 0.2)',
-          'rgba(255, 159, 64, 0.2)'
-        ],
-        borderColor: [
-          'rgba(255, 99, 132, 1)',
-          'rgba(54, 162, 235, 1)',
-          'rgba(255, 206, 86, 1)',
-          'rgba(75, 192, 192, 1)',
-          'rgba(153, 102, 255, 1)',
-          'rgba(255, 159, 64, 1)'
-        ],
-        borderWidth: 1
-      }
-    ]
-  },
-  {
-    scales: {
-      yAxes: [
-        {
-          ticks: {
-            beginAtZero: true
-          }
-        }
-      ]
-    }
-  }
-).then((result) => {
-  console.log('done')
-  fs.writeFileSync('out.png', result.body)
-})
