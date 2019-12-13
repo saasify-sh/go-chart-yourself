@@ -30,6 +30,10 @@
   ],
   "dependencies": {
     "chart.js": "^2.9.3",
+    "chartjs-chart-radial-gauge": "^1.0.3",
+    "chartjs-plugin-annotation": "^0.5.7",
+    "chartjs-plugin-datalabels": "^0.7.0",
+    "chartjs-plugin-piechart-outlabels": "^0.1.4",
     "chartjs-plugin-rough": "^0.2.0",
     "chrome-aws-lambda": "^2.0.1",
     "fts-core": "^1.1.0",

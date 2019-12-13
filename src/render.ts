@@ -1,5 +1,5 @@
 import { HttpResponse } from 'fts-core'
-import { ChartType, ChartData, ChartOptions } from 'chart.js'
+import { ChartData, ChartOptions, ChartConfiguration } from 'chart.js'
 
 import { getPage } from './lib/page'
 import { GoogleFont } from './google-fonts'
@@ -14,6 +14,19 @@ type ChartRoughFillStyle =
   | 'starburst'
   | 'dashed'
   | 'zigzag-line'
+
+type ChartType =
+  | 'line'
+  | 'bar'
+  | 'horizontalBar'
+  | 'radar'
+  | 'donut'
+  | 'doughnut'
+  | 'polarArea'
+  | 'bubble'
+  | 'pie'
+  | 'scatter'
+  | 'radialGauge'
 
 /**
  * Renders the given chart as a static PNG image using [chart.js](https://www.chartjs.org).
@@ -72,6 +85,11 @@ export async function render(
   curveStepCount: number = 9,
   simplification: number = 9
 ): Promise<HttpResponse> {
+  if (type === 'donut') {
+    // accept both types of spelling
+    type = 'doughnut'
+  }
+
   const fonts = fontFamily
     ? fontFamily.split(',').map((font) => font.trim())
     : []
@@ -89,7 +107,7 @@ export async function render(
       )} ].map((f) => f.load())).then(ready);`
     : 'ready();'
 
-  const chartConfig = {
+  const chart = {
     type,
     data,
     options: {
@@ -120,6 +138,10 @@ export async function render(
     }
   }
 
+  console.log('>>> chart', JSON.stringify(chart))
+  customizeChart(chart)
+  console.log('<<< chart', JSON.stringify(chart))
+
   const html = `
 <html>
 <head>
@@ -131,6 +153,13 @@ export async function render(
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.3/Chart.bundle.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/roughjs@3.1.0/dist/rough.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-rough@0.2.0/dist/chartjs-plugin-rough.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@0.5.7/src/index.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@0.7.0/dist/chartjs-plugin-datalabels.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-chart-radial-gauge@1.0.3/build/Chart.RadialGauge.cjs.min.js"></script>
+
+  <!-- TODO
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-piechart-outlabels@0.1.4/dist/chartjs-plugin-piechart-outlabels.min.js"></script>
+  -->
 
   <style>
 * {
@@ -152,7 +181,7 @@ body {
 
 <script>
   function ready () {
-    const chartConfig = ${JSON.stringify(chartConfig)};
+    const chartConfig = ${JSON.stringify(chart)};
     const plugins = [];
 
     ${
@@ -211,4 +240,184 @@ body {
     statusCode: 200,
     body
   }
+}
+
+const DEFAULT_COLORS = {
+  blue: '#4D89F9',
+  green: '#00B88A',
+  orange: 'rgb(255, 159, 64)',
+  red: 'rgb(255, 99, 132)',
+  purple: 'rgb(153, 102, 255)',
+  yellow: '#fc3',
+  grey: 'rgb(201, 203, 207)'
+}
+
+const ROUND_CHART_TYPES = new Set([
+  'pie',
+  'doughnut',
+  'polarArea',
+  'outlabeledPie',
+  'outlabeledDoughnut'
+])
+
+const DEFAULT_COLOR_WHEEL = Object.values(DEFAULT_COLORS)
+
+function addBackgroundColors(chart) {
+  if (chart.data && chart.data.datasets && Array.isArray(chart.data.datasets)) {
+    chart.data.datasets.forEach((data, dataIdx) => {
+      if (!data.backgroundColor) {
+        if (ROUND_CHART_TYPES.has(chart.type)) {
+          // Return a color for each value
+          data.backgroundColor = data.data.map(
+            (_, colorIdx) =>
+              DEFAULT_COLOR_WHEEL[colorIdx % DEFAULT_COLOR_WHEEL.length]
+          )
+        } else {
+          // Return a color for each data
+          data.backgroundColor =
+            DEFAULT_COLOR_WHEEL[dataIdx % DEFAULT_COLOR_WHEEL.length]
+        }
+      }
+    })
+  }
+}
+
+function customizeChart(chart: ChartConfiguration) {
+  if (chart.type === 'sparkline') {
+    if (chart.data.datasets.length > 1) {
+      throw new Error(
+        '"sparkline" only supports 1 line. Use "line" chart type for multiple lines.'
+      )
+    }
+
+    if (chart.data.datasets.length < 1) {
+      throw new Error('"sparkline" requres 1 dataset')
+    }
+
+    chart.type = 'line'
+    const dataseries = chart.data.datasets[0].data
+    if (!chart.data.labels) {
+      chart.data.labels = Array(dataseries.length)
+    }
+
+    chart.options.legend = chart.options.legend || { display: false }
+    if (!chart.options.elements) {
+      chart.options.elements = {}
+    }
+
+    chart.options.elements.line = chart.options.elements.line || {
+      borderColor: '#000',
+      borderWidth: 1
+    }
+    chart.options.elements.point = chart.options.elements.point || {
+      radius: 0
+    }
+    if (!chart.options.scales) {
+      chart.options.scales = {}
+    }
+
+    let min = Number.POSITIVE_INFINITY
+    let max = Number.NEGATIVE_INFINITY
+
+    for (let i = 0; i < dataseries.length; i += 1) {
+      const dp = dataseries[i] as number
+      min = Math.min(min, dp)
+      max = Math.max(max, dp)
+    }
+
+    chart.options.scales.xAxes = chart.options.scales.xAxes || [
+      { display: false }
+    ]
+
+    chart.options.scales.yAxes = chart.options.scales.yAxes || [
+      {
+        display: false,
+        ticks: {
+          // Offset the min and max slightly so that pixels aren't shaved off
+          // under certain circumstances.
+          min: min - min * 0.05,
+          max: max + max * 0.05
+        }
+      }
+    ]
+  } else if (
+    chart.type === 'bar' ||
+    chart.type === 'line' ||
+    chart.type === 'scatter' ||
+    chart.type === 'bubble'
+  ) {
+    if (!chart.options.scales) {
+      chart.options.scales = {
+        yAxes: [
+          {
+            ticks: {
+              beginAtZero: true
+            }
+          }
+        ]
+      }
+    }
+
+    addBackgroundColors(chart)
+  } else if (chart.type === 'radar') {
+    addBackgroundColors(chart)
+  } else if (ROUND_CHART_TYPES.has(chart.type)) {
+    addBackgroundColors(chart)
+  } else if (chart.type === 'scatter') {
+    addBackgroundColors(chart)
+  } else if (chart.type === 'bubble') {
+    addBackgroundColors(chart)
+  }
+
+  if (chart.type === 'line') {
+    chart.data.datasets.forEach((dataset) => {
+      const data = dataset
+      // Make line charts straight lines by default.
+      data.lineTension = data.lineTension || 0
+    })
+  }
+
+  chart.options.plugins = chart.options.plugins || {}
+  let usingDataLabelsDefaults = false
+
+  if (!chart.options.plugins.datalabels) {
+    usingDataLabelsDefaults = true
+    chart.options.plugins.datalabels = {}
+
+    if (chart.type === 'pie' || chart.type === 'doughnut') {
+      chart.options.plugins.datalabels = {
+        display: true
+      }
+    } else {
+      chart.options.plugins.datalabels = {
+        display: false
+      }
+    }
+  }
+
+  /*
+  // TODO
+  if (ROUND_CHART_TYPES.has(chart.type) || chart.type === 'radialGauge') {
+    let userSpecifiedOutlabels = false
+
+    chart.data.datasets.forEach((dataset) => {
+      if (
+        dataset.outlabels ||
+        (chart.options.plugins && chart.options.plugins.outlabels)
+      ) {
+        userSpecifiedOutlabels = true
+      } else {
+        // Disable outlabels by default.
+        dataset.outlabels = { display: false }
+      }
+    })
+
+    if (userSpecifiedOutlabels && usingDataLabelsDefaults) {
+      // If outlabels are enabled, disable datalabels by default.
+      chart.options.plugins.datalabels = {
+        display: false
+      }
+    }
+  }
+  */
 }
