@@ -4,6 +4,7 @@
   "services": [
     {
       "src": "src/render.ts",
+      "immutable": true,
       "examples": [
         {
           "name": "Bar Chart",

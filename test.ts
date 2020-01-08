@@ -1,9 +1,9 @@
 import * as fs from 'fs'
 import { render } from './src/render'
 
-render(
-  'bar',
-  {
+const example = {
+  type: 'bar',
+  data: {
     labels: ['Red', 'Blue', 'Yellow', 'Green', 'Purple', 'Orange'],
     datasets: [
       {
@@ -29,7 +29,7 @@ render(
       }
     ]
   },
-  {
+  options: {
     scales: {
       yAxes: [
         {
@@ -40,7 +40,9 @@ render(
       ]
     }
   }
-).then((result) => {
+}
+
+render(example.type, example.data, example.options).then((result) => {
   console.log('done')
   fs.writeFileSync('out.png', result.body)
 })
